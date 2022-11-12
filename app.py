@@ -89,10 +89,11 @@ def login():
             if user:
                 if bcrypt.check_password_hash(user[2], password):
                     access_token = create_access_token(identity=username)
-                    response = {"access_token": access_token}
+                    response = {"access_token": access_token
+                                }
                     return response
 
-    return {"message": f"trying to login with {username} and {password}. found {user[2]}"}
+    return {"message": f"trying to login with {username} and {password} failed"}
 
 
 if __name__ == "__main__":
