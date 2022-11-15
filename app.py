@@ -72,11 +72,12 @@ def view_users():
 
 @ app.post('/api/seeduser')
 def seed_user():
-    username = "branyzp@gmail.com"
-    password = "password123"
-    firstname = "Brandon"
-    lastname = "Yeo"
-    hashed_password = bcrypt.generate_password_hash(password)
+    data = request.get_json()
+    username = data["username"]
+    password = data["password"]
+    firstname = data["firstname"]
+    lastname = data["lastname"]
+    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
     with connection:
         with connection.cursor() as cursor:
             cursor.execute(DROP_USER_TABLE)
@@ -156,11 +157,11 @@ def login():
 def update_user():
     data = request.get_json()
     username = data["username"]
-    password = data["password"]
+    # password = data["password"]
     firstname = data["firstname"]
     lastname = data["lastname"]
     id = int(data["id"])
-    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+    # hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
     with connection:
         with connection.cursor() as cursor:
             cursor.execute(f"SELECT username FROM users WHERE id={id}")
@@ -168,12 +169,27 @@ def update_user():
 
             if OldUsername != username:
                 cursor.execute(
-                    f"UPDATE users SET firstname='{firstname}',lastname='{lastname}',username='{username}',password='{hashed_password}' WHERE id={id}")
+                    f"UPDATE users SET firstname='{firstname}',lastname='{lastname}',username='{username}' WHERE id={id}")
             else:
                 cursor.execute(
-                    f"UPDATE users SET firstname='{firstname}',lastname='{lastname}',password='{hashed_password}' WHERE id={id}")
+                    f"UPDATE users SET firstname='{firstname}',lastname='{lastname}' WHERE id={id}")
 
-    return {"message": f"userid {id} details updated to username:{username}, password:{password}, firstname:{firstname}, lastname:{lastname}"}, 201
+    return {"message": f"userid {id} details updated to username:{username}, firstname:{firstname}, lastname:{lastname}"}, 201
+
+
+@app.put('/api/updatepw')
+@cross_origin()
+def change_pw():
+    data = request.get_json()
+    newPassword = data["newPassword"]
+    id = int(data["id"])
+    with connection:
+        hashed_new_password = bcrypt.generate_password_hash(
+            newPassword).decode('utf-8')
+        cursor = connection.cursor()
+        cursor.execute(
+            f"UPDATE users SET password='{hashed_new_password}' WHERE id={id}")
+    return {"message": f"user password updated"}, 201
 
 
 if __name__ == "__main__":
