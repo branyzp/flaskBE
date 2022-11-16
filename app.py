@@ -8,7 +8,7 @@ from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, u
 
 # user table
 DROP_USER_TABLE = (
-    "DROP TABLE IF EXISTS users"
+    "DROP TABLE IF EXISTS users CASCADE"
 )
 CREATE_USER_TABLE = (
     "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT UNIQUE, password TEXT, firstname TEXT, lastname TEXT);"
@@ -35,11 +35,15 @@ DROP_EXPENSES_TABLE = (
     "DROP TABLE IF EXISTS expenses"
 )
 CREATE_EXPENSES_TABLE = (
-    "CREATE TABLE IF NOT EXISTS expenses(id SERIAL PRIMARY KEY, userid INTEGER FOREIGN KEY REFERENCES users(id), expense TEXT , category TEXT)"
+    "CREATE TABLE IF NOT EXISTS expenses(id SERIAL PRIMARY KEY, userid INTEGER REFERENCES users(id) ON DELETE CASCADE, category TEXT, expenseName TEXT ,expenseInt INTEGER)"
 )
 
 INSERT_EXPENSE = (
-    "INSERT INTO expenses (userid, expense, category) VALUES (%s,%s,%s)"
+    "INSERT INTO expenses (userid, category, expenseName, expenseInt) VALUES (%s,%s,%s,%s)"
+)
+
+VIEW_EXPENSE_SPECIFIC_USER = (
+    "SELECT * FROM expenses WHERE userid=(%s)"
 )
 
 
@@ -59,6 +63,8 @@ jwt = JWTManager(app)
 @ app.route('/')
 def index():
     return "Hello World"
+
+# USERS API
 
 
 @ app.get('/api/viewusers')
@@ -123,7 +129,7 @@ def login():
                                 "user_details": user}
                     return response
 
-    return {"message": f"trying to login with {username} and {password} failed"}
+    return {"message": f"trying to login with {username} and {password} failed"}, 500
 
 
 # @ app.put('/api/updateuser')
@@ -142,15 +148,6 @@ def login():
 #                 UPDATE_USER, (username, hashed_password, firstname, lastname, id))
 #     return {"message": f"userid {id} details updated to username:{username}, password:{password}, firstname:{firstname}, lastname:{lastname}"}, 201
 
-# @app.post('/api/seedexpenses')
-# @cross_origin()
-# def seed_expense():
-
-#     with connection:
-#         with connection.cursor() as cursor:
-#             cursor.execute(DROP_EXPENSES_TABLE)
-#             cursor.execute(CREATE_EXPENSES_TABLE)
-#             cursor.execute(INSERT_EXPENSE)
 
 @ app.put('/api/updateuser')
 @ cross_origin()
@@ -177,19 +174,97 @@ def update_user():
     return {"message": f"userid {id} details updated to username:{username}, firstname:{firstname}, lastname:{lastname}"}, 201
 
 
+@app.delete('/api/deleteuser')
+@cross_origin()
+def delete_user():
+    data = request.get_json()
+    id = data["id"]
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute(f"DELETE from users WHERE id = {id}")
+            return {"message": f"user {id} deleted"}, 201
+
+
 @app.put('/api/updatepw')
 @cross_origin()
 def change_pw():
     data = request.get_json()
+    oldPassword = data["oldPassword"]
     newPassword = data["newPassword"]
     id = int(data["id"])
+    hashed_new_password = bcrypt.generate_password_hash(
+        newPassword).decode('utf-8')
     with connection:
-        hashed_new_password = bcrypt.generate_password_hash(
-            newPassword).decode('utf-8')
         cursor = connection.cursor()
         cursor.execute(
-            f"UPDATE users SET password='{hashed_new_password}' WHERE id={id}")
-    return {"message": f"user password updated"}, 201
+            f"SELECT * FROM users WHERE id = {id}")
+        user = cursor.fetchone()
+        if user:
+            if bcrypt.check_password_hash(user[2], oldPassword):
+                cursor.execute(
+                    f"UPDATE users SET password='{hashed_new_password}' WHERE id={id}")
+                return {"message": f"user password updated"}, 201
+    return {"message", "password update failed."}, 500
+
+# EXPENSES API
+
+
+@app.post('/api/seedexpenses')
+@cross_origin()
+def seed_expense():
+    data = request.get_json()
+    userid = int(data["userid"])
+    category = data["category"]
+    expenseName = data["expenseName"]
+    expenseInt = int(data["expenseInt"])
+
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute(DROP_EXPENSES_TABLE)
+            cursor.execute(CREATE_EXPENSES_TABLE)
+            cursor.execute(
+                INSERT_EXPENSE, (userid, category, expenseName, expenseInt,))
+            return {"message": "expenses table seeded"}, 201
+
+
+@app.get('/api/viewexpenses')
+@cross_origin()
+def view_expenses():
+    data = request.get_json()
+    userid = data["userid"]
+
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute(VIEW_EXPENSE_SPECIFIC_USER, userid)
+            res = cursor.fetchall()
+            return res
+
+
+@app.post('/api/addexpense')
+@cross_origin()
+def add_expense():
+    data = request.get_json()
+    userid = int(data["userid"])
+    category = data["category"]
+    expenseName = data["expenseName"]
+    expenseInt = int(data["expenseInt"])
+
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                INSERT_EXPENSE, (userid, category, expenseName, expenseInt,))
+            return {"message": "expenses table seeded"}, 201
+
+
+@app.delete('/api/deleteexpense')
+@cross_origin()
+def delete_expense():
+    data = request.get_json()
+    id = data['id']
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute(f"DELETE from EXPENSES WHERE id = {id}")
+            return {"message": "expense deleted"}, 201
 
 
 if __name__ == "__main__":
