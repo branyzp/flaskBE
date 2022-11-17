@@ -120,7 +120,7 @@ def login():
     with connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                f"SELECT * FROM users WHERE username = '{username}'")
+                "SELECT * FROM users WHERE username = %s", (username,))
             user = cursor.fetchone()
             if user:
                 if bcrypt.check_password_hash(user[2], password):
@@ -161,27 +161,27 @@ def update_user():
     # hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
     with connection:
         with connection.cursor() as cursor:
-            cursor.execute(f"SELECT username FROM users WHERE id={id}")
+            cursor.execute("SELECT username FROM users WHERE id=%s", (id,))
             OldUsername = cursor.fetchone()
 
             if OldUsername != username:
                 cursor.execute(
-                    f"UPDATE users SET firstname='{firstname}',lastname='{lastname}',username='{username}' WHERE id={id}")
+                    "UPDATE users SET firstname=%s,lastname=%s,username=%s WHERE id=%s", (firstname, lastname, username, id,))
             else:
                 cursor.execute(
-                    f"UPDATE users SET firstname='{firstname}',lastname='{lastname}' WHERE id={id}")
+                    "UPDATE users SET firstname=%s,lastname=%s WHERE id=%s", (firstname, lastname, id,))
 
     return {"message": f"userid {id} details updated to username:{username}, firstname:{firstname}, lastname:{lastname}"}, 201
 
 
-@app.delete('/api/deleteuser')
+@app.get('/api/deleteuser')
 @cross_origin()
 def delete_user():
     data = request.get_json()
     id = data["id"]
     with connection:
         with connection.cursor() as cursor:
-            cursor.execute(f"DELETE from users WHERE id = {id}")
+            cursor.execute("DELETE from users WHERE id = %s", id,)
             return {"message": f"user {id} deleted"}, 201
 
 
@@ -197,12 +197,12 @@ def change_pw():
     with connection:
         cursor = connection.cursor()
         cursor.execute(
-            f"SELECT * FROM users WHERE id = {id}")
+            "SELECT * FROM users WHERE id = %s", (id,))
         user = cursor.fetchone()
         if user:
             if bcrypt.check_password_hash(user[2], oldPassword):
                 cursor.execute(
-                    f"UPDATE users SET password='{hashed_new_password}' WHERE id={id}")
+                    "UPDATE users SET password=%s WHERE id=%s", (hashed_new_password, id,))
                 return {"message": f"user password updated"}, 201
     return {"message", "password update failed."}, 500
 
@@ -253,7 +253,7 @@ def add_expense():
         with connection.cursor() as cursor:
             cursor.execute(
                 INSERT_EXPENSE, (userid, category, expenseName, expenseInt,))
-            return {"message": "expenses table seeded"}, 201
+            return {"message": "expense added"}, 201
 
 
 @app.delete('/api/deleteexpense')
@@ -263,7 +263,7 @@ def delete_expense():
     id = data['id']
     with connection:
         with connection.cursor() as cursor:
-            cursor.execute(f"DELETE from EXPENSES WHERE id = {id}")
+            cursor.execute("DELETE from EXPENSES WHERE id = %s", (id,))
             return {"message": "expense deleted"}, 201
 
 
