@@ -5,13 +5,13 @@ from dotenv import load_dotenv
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS, cross_origin
 from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, unset_jwt_cookies, jwt_required, JWTManager
-
+from datetime import datetime
 # user table
 DROP_USER_TABLE = (
     "DROP TABLE IF EXISTS users CASCADE"
 )
 CREATE_USER_TABLE = (
-    "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT UNIQUE, password TEXT, firstname TEXT, lastname TEXT);"
+    "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT UNIQUE, password TEXT, firstname TEXT, lastname TEXT, joinDate TEXT NOT NULL DEFAULT CURRENT_DATE);"
 )
 
 INSERT_USER = (
@@ -174,14 +174,14 @@ def update_user():
     return {"message": f"userid {id} details updated to username:{username}, firstname:{firstname}, lastname:{lastname}"}, 201
 
 
-@app.get('/api/deleteuser')
+@app.delete('/api/deleteuser')
 @cross_origin()
 def delete_user():
     data = request.get_json()
     id = data["id"]
     with connection:
         with connection.cursor() as cursor:
-            cursor.execute("DELETE from users WHERE id = %s", id,)
+            cursor.execute("DELETE from users WHERE id = %s", (id,))
             return {"message": f"user {id} deleted"}, 201
 
 
@@ -203,7 +203,7 @@ def change_pw():
             if bcrypt.check_password_hash(user[2], oldPassword):
                 cursor.execute(
                     "UPDATE users SET password=%s WHERE id=%s", (hashed_new_password, id,))
-                return {"message": f"user password updated"}, 201
+                return {"message": "user password updated"}, 201
     return {"message", "password update failed."}, 500
 
 # EXPENSES API
@@ -260,7 +260,7 @@ def add_expense():
 @cross_origin()
 def delete_expense():
     data = request.get_json()
-    id = data['id']
+    id = ['id']
     with connection:
         with connection.cursor() as cursor:
             cursor.execute("DELETE from EXPENSES WHERE id = %s", (id,))
