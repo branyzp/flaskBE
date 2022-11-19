@@ -35,11 +35,11 @@ DROP_EXPENSES_TABLE = (
     "DROP TABLE IF EXISTS expenses"
 )
 CREATE_EXPENSES_TABLE = (
-    "CREATE TABLE IF NOT EXISTS expenses(id SERIAL PRIMARY KEY, userid INTEGER REFERENCES users(id) ON DELETE CASCADE, category TEXT, expenseName TEXT ,expenseInt INTEGER)"
+    "CREATE TABLE IF NOT EXISTS expenses(id SERIAL PRIMARY KEY, userid INTEGER REFERENCES users(id) ON DELETE CASCADE, category TEXT, expenseName TEXT ,expenseInt INTEGER, expenseDate DATE, expenseComments TEXT)"
 )
 
 INSERT_EXPENSE = (
-    "INSERT INTO expenses (userid, category, expenseName, expenseInt) VALUES (%s,%s,%s,%s)"
+    "INSERT INTO expenses (userid, category, expenseName, expenseInt, expenseDate, expenseComments) VALUES (%s,%s,%s,%s,%s,%s)"
 )
 
 VIEW_EXPENSE_SPECIFIC_USER = (
@@ -217,13 +217,15 @@ def seed_expense():
     category = data["category"]
     expenseName = data["expenseName"]
     expenseInt = int(data["expenseInt"])
+    expenseDate = data["expenseDate"]
+    expenseComments = data["expenseComments"]
 
     with connection:
         with connection.cursor() as cursor:
             cursor.execute(DROP_EXPENSES_TABLE)
             cursor.execute(CREATE_EXPENSES_TABLE)
             cursor.execute(
-                INSERT_EXPENSE, (userid, category, expenseName, expenseInt,))
+                INSERT_EXPENSE, (userid, category, expenseName, expenseInt, expenseDate, expenseComments))
             return {"message": "expenses table seeded"}, 201
 
 
@@ -248,11 +250,13 @@ def add_expense():
     category = data["category"]
     expenseName = data["expenseName"]
     expenseInt = int(data["expenseInt"])
+    expenseDate = data["expenseDate"]
+    expenseComments = data["expenseComments"]
 
     with connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                INSERT_EXPENSE, (userid, category, expenseName, expenseInt,))
+                INSERT_EXPENSE, (userid, category, expenseName, expenseInt, expenseDate, expenseComments))
             return {"message": "expense added"}, 201
 
 
@@ -260,7 +264,7 @@ def add_expense():
 @cross_origin()
 def delete_expense():
     data = request.get_json()
-    id = ['id']
+    id = data['id']
     with connection:
         with connection.cursor() as cursor:
             cursor.execute("DELETE from EXPENSES WHERE id = %s", (id,))
