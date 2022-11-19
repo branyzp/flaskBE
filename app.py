@@ -233,11 +233,11 @@ def seed_expense():
 @cross_origin()
 def view_expenses():
     data = request.get_json()
-    userid = data["userid"]
+    userid = int(data["userid"])
 
     with connection:
         with connection.cursor() as cursor:
-            cursor.execute(VIEW_EXPENSE_SPECIFIC_USER, userid)
+            cursor.execute(VIEW_EXPENSE_SPECIFIC_USER, (userid,))
             res = cursor.fetchall()
             return res
 
