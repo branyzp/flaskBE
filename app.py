@@ -229,7 +229,7 @@ def seed_expense():
             return {"message": "expenses table seeded"}, 201
 
 
-@app.get('/api/viewexpenses')
+@app.post('/api/viewexpenses')
 @cross_origin()
 def view_expenses():
     data = request.get_json()
